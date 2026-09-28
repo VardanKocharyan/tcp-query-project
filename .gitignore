@@ -1,0 +1,171 @@
+# ============================================================
+# Build directories / CMake
+# ============================================================
+
+build/
+build-*/
+cmake-build-*/
+
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
+Makefile
+compile_commands.json
+
+CTestTestfile.cmake
+Testing/
+*.cmake.user
+
+
+# ============================================================
+# Compiled binaries / libraries
+# ============================================================
+
+*.o
+*.obj
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+
+
+# ============================================================
+# Testing / coverage
+# ============================================================
+
+*.gcda
+*.gcno
+*.gcov
+
+coverage/
+coverage.html
+lcov.info
+
+test-results/
+test-output/
+
+
+# ============================================================
+# Sanitizers / Debugging
+# ============================================================
+
+asan/
+ubsan/
+tsan/
+msan/
+
+# Core dumps
+core
+core.*
+*.core
+
+# Valgrind
+valgrind-out/
+valgrind.log
+valgrind-*.log
+
+
+# ============================================================
+# IDEs / Editors
+# ============================================================
+
+# Visual Studio Code
+.vscode/
+
+# CLion / JetBrains
+.idea/
+*.iml
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Qt Creator
+*.pro.user
+*.pro.user.*
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+.#*
+\#*\#
+
+
+# ============================================================
+# OS generated files
+# ============================================================
+
+.directory
+
+.DS_Store
+.AppleDouble
+.LSOverride
+
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+
+# ============================================================
+# Temporary / generated files
+# ============================================================
+
+*.tmp
+*.temp
+*.log
+*.bak
+*.orig
+
+# Runtime-generated files
+*.pid
+*.sock
+
+
+# ============================================================
+# Local environment / secrets
+# ============================================================
+
+.env
+.env.*
+!.env.example
+
+# Local configuration
+config.local.*
+*.local
+
+
+# ============================================================
+# Package / dependency managers
+# ============================================================
+
+# Conan
+.conan/
+
+# vcpkg user-specific state
+.vcpkg-root
+
+# FetchContent / downloaded dependencies
+_deps/
+deps/
+
+
+# ============================================================
+# Project-specific generated data
+# ============================================================
+
+logs/
+tmp/
+runtime/
+
+# Local server output
+server.log
+daemon.log
