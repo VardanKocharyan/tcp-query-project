@@ -10,5 +10,12 @@
 #define MAX_KEY_SIZE      UINT16_MAX //65535
 #define MAX_VALUE_SIZE    UINT16_MAX //65535
 
+typedef enum {
+    PROTOCOL_SUCCESS,
+    PROTOCOL_INCOMPLETE,
+    PROTOCOL_INVALID,
+    PROTOCOL_TOO_LARGE
+} protocol_result_t;
+
 
 #endif
