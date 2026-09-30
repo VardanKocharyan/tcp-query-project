@@ -1,4 +1,4 @@
-#include "massage.h"
+#include "protocol/message.h"
 
 void query_init(Query* query,
                 query_operation_t op,

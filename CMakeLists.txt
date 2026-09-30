@@ -18,6 +18,7 @@ enable_testing()
 # Core library
 add_library(tcp_query_core STATIC
     src/core/query_handler.c
+    src/protocol/message.c
 )
 
 target_include_directories(tcp_query_core

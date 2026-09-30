@@ -10,7 +10,7 @@ typedef enum {
 
 typedef struct {
     query_operation_t operation;
-    const char * key;
+    const char* key;
     const char* value;
 
 } Query;
