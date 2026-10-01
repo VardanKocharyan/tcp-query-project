@@ -26,3 +26,17 @@ add_test(
     NAME test_query_handler
     COMMAND test_query_handler
 )
+
+add_executable(test_codec
+    unit/test_codec.c
+)
+
+target_link_libraries( test_codec
+    PRIVATE
+        tcp_query_core
+)
+
+add_test(
+    NAME test_codec
+    COMMAND test_codec
+)

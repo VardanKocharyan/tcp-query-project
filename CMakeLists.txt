@@ -19,6 +19,7 @@ enable_testing()
 add_library(tcp_query_core STATIC
     src/core/query_handler.c
     src/protocol/message.c
+    src/protocol/codec.c
 )
 
 target_include_directories(tcp_query_core
@@ -87,6 +88,8 @@ elseif(MSVC)
         /WX
     )
 endif()
+
+
 
 # Tests
 add_subdirectory(tests)

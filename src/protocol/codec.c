@@ -1,4 +1,4 @@
-#include "codec.h"
+#include "protocol/codec.h"
 
 void write_u32(uint8_t* buffer, uint32_t value) {
     buffer[0] = (value & 0xFF000000) >> 24;
