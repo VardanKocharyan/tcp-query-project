@@ -21,4 +21,11 @@ typedef enum {
 } protocol_result_t;
 
 
+typename struct {
+    protocol_result_t status;
+    uint32_t bytes_written;
+} protocol_result_info_t;
+
 #endif
+
+
