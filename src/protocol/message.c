@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "protocol/message.h"
 
 void query_init(Query* query,
@@ -16,4 +18,17 @@ void response_init(Response *response,
 {
     response->status = status;
     response->value = value;
+}
+
+void query_free(Query* query)
+{
+    if (query == NULL) {
+        return;
+    }
+
+    free((void*)query->key);
+    free((void*)query->value);
+
+    query->key = NULL;
+    query->value = NULL;
 }

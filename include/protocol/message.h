@@ -18,6 +18,8 @@ typedef struct {
 void query_init(Query* query, query_operation_t op, 
         const char* k, const char* val);
 
+void query_free(Query* query);
+
 
 // Response
 typedef enum {
