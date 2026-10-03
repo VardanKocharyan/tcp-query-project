@@ -40,3 +40,18 @@ add_test(
     NAME test_codec
     COMMAND test_codec
 )
+
+add_executable( test_serializer
+    unit/test_serializer.c
+    ../src/protocol/serializer.c
+    
+)
+target_link_libraries( test_serializer
+    PRIVATE
+        tcp_query_core
+
+)
+add_test(
+    NAME test_serializer
+    COMMAND test_serializer
+)

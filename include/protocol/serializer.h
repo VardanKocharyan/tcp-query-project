@@ -13,4 +13,4 @@ protocol_result_info_t serialize_query(
     size_t capacity
 );
 
-yendif
+#endif
