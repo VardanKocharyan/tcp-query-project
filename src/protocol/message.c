@@ -32,3 +32,13 @@ void query_free(Query* query)
     query->key = NULL;
     query->value = NULL;
 }
+
+void response_free(Response* response)
+{
+    if (response == NULL) {
+        return;
+    }
+
+    free((void*)response->value);
+    response->value = NULL;
+}

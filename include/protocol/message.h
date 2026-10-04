@@ -36,4 +36,6 @@ void response_init(Response *response,
                    query_status_t status,
                    const char *value);
 
+void response_free(Response* response);
+
 #endif
