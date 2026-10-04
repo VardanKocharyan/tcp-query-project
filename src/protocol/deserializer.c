@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include "protocol/deserializer.h"
 #include "protocol/codec.h"
 
@@ -7,8 +10,8 @@ protocol_parser_info_t deserialize_query(
     Query* query
 ) {
     protocol_parser_info_t parse = {
-        .status = PROTOCOL_INVALID;
-        .bytes_consumed = 0;
+        .status = PROTOCOL_INVALID,
+        .bytes_consumed = 0
     };
 
     if (buffer == NULL || query == NULL) {
@@ -35,7 +38,7 @@ protocol_parser_info_t deserialize_query(
         return parse;
     }
 
-    size_t frame_size = PROTOCOL_HEADER_SIZE + payload_length;
+    size_t frame_size = PROTOCOL_HEADER_SIZE + paylure_length;
 
     if (length < frame_size) {
         parse.status = PROTOCOL_INCOMPLETE;

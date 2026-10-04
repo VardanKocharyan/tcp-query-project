@@ -55,3 +55,17 @@ add_test(
     NAME test_serializer
     COMMAND test_serializer
 )
+
+add_executable( test_deserializer
+    unit/test_deserializer.c
+    ../src/protocol/serializer.c
+    ../src/protocol/deserializer.c
+)
+target_link_libraries( test_deserializer
+    PRIVATE
+        tcp_query_core
+)
+add_test(
+    NAME test_deserializer
+    COMMAND test_deserializer
+)
