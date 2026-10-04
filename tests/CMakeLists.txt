@@ -69,3 +69,16 @@ add_test(
     NAME test_deserializer
     COMMAND test_deserializer
 )
+
+add_executable( test_response_serializer
+    unit/test_response_serializer.c
+    ../src/protocol/response_serializer.c
+)
+target_link_libraries( test_response_serializer
+    PRIVATE
+        tcp_query_core
+)
+add_test(
+    NAME test_response_serializer
+    COMMAND test_response_serializer
+)
