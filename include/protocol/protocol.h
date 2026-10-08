@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "protocol/message.h"
+//#include "protocol/messagage.h"
 
 #define PROTOCOL_MESSAGE_QUERY    0x01
 #define PROTOCOL_MESSAGE_RESPONSE 0x02
