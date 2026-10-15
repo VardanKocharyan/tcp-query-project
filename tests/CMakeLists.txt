@@ -96,3 +96,16 @@ add_test(
     NAME test_response_deserializer
     COMMAND test_response_deserializer
 )
+
+add_executable( test_framer
+    unit/test_framer.c
+    ../src/protocol/framer.c
+)
+target_link_libraries( test_framer
+    PRIVATE
+        tcp_query_core
+)
+add_test(
+    NAME test_framer
+    COMMAND test_framer
+)

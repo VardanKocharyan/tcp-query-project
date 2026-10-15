@@ -72,7 +72,7 @@ protocol_framer_info_t append(
     }
 
     memcpy(
-        framer->buffer,
+        framer->buffer + framer->size,
         data,
         bytes_to_copy
     );
