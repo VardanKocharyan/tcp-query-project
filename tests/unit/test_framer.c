@@ -295,6 +295,73 @@ static void framer_extract_zero_payload_test(void)
     protocol_framer_destroy(&framer);
 }
 
+
+void framer_extract_two_frames_test(void)
+{
+    protocol_framer_t framer;
+    protocol_framer_init(&framer);
+
+    const uint8_t first_frame[] = {
+        PROTOCOL_MESSAGE_QUERY, 0x00, 0x00, 0x00, 0x03,
+        'c', 'a', 't'
+    };
+
+    const uint8_t second_frame[] = {
+        PROTOCOL_MESSAGE_RESPONSE, 0x00, 0x00, 0x00, 0x03,
+        'd', 'o', 'g'
+    };
+
+    uint8_t combined[sizeof(first_frame) + sizeof(second_frame)];
+
+    memcpy(combined, first_frame, sizeof(first_frame));
+    memcpy(
+        combined + sizeof(first_frame),
+        second_frame,
+        sizeof(second_frame)
+    );
+
+    /* Append both frames in one call. */
+    protocol_framer_info_t append_result =
+        append(&framer, combined, sizeof(combined));
+
+    assert(append_result.status == PROTOCOL_SUCCESS);
+    assert(append_result.bytes_consumed == sizeof(combined));
+
+    /* Extract the first frame. */
+    protocol_framer_extract_info_t first_result =
+        protocol_framer_extract(&framer);
+
+    assert(first_result.status == PROTOCOL_SUCCESS);
+    assert(first_result.frame_size == sizeof(first_frame));
+    assert(memcmp(
+        first_result.frame,
+        first_frame,
+        sizeof(first_frame)
+    ) == 0);
+
+    free(first_result.frame);
+
+    /* Extract the second frame without appending more data. */
+    protocol_framer_extract_info_t second_result =
+        protocol_framer_extract(&framer);
+
+    assert(second_result.status == PROTOCOL_SUCCESS);
+    assert(second_result.frame_size == sizeof(second_frame));
+    assert(memcmp(
+        second_result.frame,
+        second_frame,
+        sizeof(second_frame)
+    ) == 0);
+
+    free(second_result.frame);
+
+    /* Both frames have been removed from the receive buffer. */
+    assert(framer.size == 0);
+
+    protocol_framer_destroy(&framer);
+}
+
+
 int main(void)
 {
     framer_init_test();
@@ -308,6 +375,7 @@ int main(void)
     framer_extract_consecutive_frames_test();
     framer_extract_oversized_payload_test();
     framer_extract_zero_payload_test();
+    framer_extract_two_frames_test();
 
     return 0;
 }
