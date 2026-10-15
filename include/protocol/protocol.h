@@ -37,6 +37,12 @@ typedef struct {
     size_t bytes_consumed;
 } protocol_framer_info_t;
 
+typedef struct {
+    protocol_result_t status;
+    uint8_t* frame;
+    size_t frame_size;
+} protocol_framer_extract_info_t;
+
 #endif
 
 

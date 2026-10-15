@@ -22,4 +22,8 @@ protocol_framer_info_t append(
     size_t size
 );
 
+protocol_framer_extract_info_t protocol_framer_extract(
+    protocol_framer_t* framer
+);
+
 #endif 
