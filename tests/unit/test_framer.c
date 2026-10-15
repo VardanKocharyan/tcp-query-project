@@ -296,7 +296,7 @@ static void framer_extract_zero_payload_test(void)
 }
 
 
-void framer_extract_two_frames_test(void)
+static void framer_extract_two_frames_test(void)
 {
     protocol_framer_t framer;
     protocol_framer_init(&framer);
@@ -361,6 +361,39 @@ void framer_extract_two_frames_test(void)
     protocol_framer_destroy(&framer);
 }
 
+static void framer_append_partial_consumption_test(void)
+{
+    protocol_framer_t framer;
+    protocol_framer_init(&framer);
+
+    const size_t max_frame_size =
+        PROTOCOL_HEADER_SIZE + (size_t)MAX_MESSAGE_SIZE;
+
+    const size_t input_size = max_frame_size + 1;
+
+    uint8_t *data = malloc(input_size);
+    assert(data != NULL);
+
+    data[0] = PROTOCOL_MESSAGE_QUERY;
+    data[1] = (uint8_t)(((uint32_t)MAX_MESSAGE_SIZE) >> 24);
+    data[2] = (uint8_t)(((uint32_t)MAX_MESSAGE_SIZE) >> 16);
+    data[3] = (uint8_t)(((uint32_t)MAX_MESSAGE_SIZE) >> 8);
+    data[4] = (uint8_t)((uint32_t)MAX_MESSAGE_SIZE);
+    memset(data + PROTOCOL_HEADER_SIZE, 'x', input_size - PROTOCOL_HEADER_SIZE);
+
+    protocol_framer_info_t result = 
+        append(&framer, data, input_size);
+
+    assert(result.status == PROTOCOL_SUCCESS);
+    assert(result.bytes_consumed == max_frame_size);
+    assert(framer.size == max_frame_size);
+
+    assert(input_size - result.bytes_consumed == 1);
+
+    free(data);
+    protocol_framer_destroy(&framer);
+}
+
 
 int main(void)
 {
@@ -376,6 +409,7 @@ int main(void)
     framer_extract_oversized_payload_test();
     framer_extract_zero_payload_test();
     framer_extract_two_frames_test();
+    framer_append_partial_consumption_test();    
 
     return 0;
 }

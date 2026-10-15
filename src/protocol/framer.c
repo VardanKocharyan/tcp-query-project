@@ -50,7 +50,7 @@ protocol_framer_info_t append(
     const size_t max_frame_size = 
         PROTOCOL_HEADER_SIZE + (size_t)MAX_MESSAGE_SIZE;
 
-    if (framer->size >= max_frame_size) {
+    if (framer->size > max_frame_size) {
         result.status = PROTOCOL_TOO_LARGE;
         return result;
     }
