@@ -4,8 +4,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-//#include "protocol/messagage.h"
-
 #define PROTOCOL_MESSAGE_QUERY    0x01
 #define PROTOCOL_MESSAGE_RESPONSE 0x02
 
@@ -33,6 +31,11 @@ typedef struct {
     protocol_result_t status;
     size_t bytes_consumed;
 } protocol_parser_info_t;
+
+typedef struct {
+    protocol_result_t status;
+    size_t bytes_consumed;
+} protocol_framer_info_t;
 
 #endif
 

@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "protocol/protocol.h"
+
 typedef struct {
     uint8_t* buffer;
     size_t size;
@@ -13,5 +15,11 @@ typedef struct {
 void protocol_framer_init(protocol_framer_t* framer);
 void protocol_framer_destroy(protocol_framer_t* framer);
 
+
+protocol_framer_info_t append(
+    protocol_framer_t* framer,
+    const uint8_t* data,
+    size_t size
+);
 
 #endif 
