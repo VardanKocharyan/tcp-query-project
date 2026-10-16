@@ -33,7 +33,7 @@ tcp_send_info_t tcp_send_all(
                 sockfd, 
                 buffer + result.bytes_sent, 
                 remaining, 
-                0
+                MSG_NOSIGNAL
             );
 
         if (bytes_sent == -1) {

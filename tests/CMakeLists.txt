@@ -109,3 +109,16 @@ add_test(
     NAME test_framer
     COMMAND test_framer
 )
+
+add_executable( test_tcp
+    unit/test_tcp.c
+    ../src/network/tcp.c
+)
+target_link_libraries( test_tcp
+    PRIVATE
+        tcp_query_core
+)
+add_test(
+    NAME test_tcp
+    COMMAND test_tcp
+)
