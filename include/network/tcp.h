@@ -17,7 +17,7 @@ typedef struct {
 tcp_send_info_t tcp_send_all(
     int sockfd, 
     const uint8_t* buffer, 
-    size_t count
+    size_t size
 );
 
 #endif
