@@ -4,6 +4,7 @@
 
 #include "network/tcp.h"
 
+//send
 tcp_send_info_t tcp_send_all(
     int sockfd,
     const uint8_t* buffer,
@@ -61,4 +62,35 @@ int tcp_socket_create(void)
 int tcp_connect(int sockfd, const struct sockaddr_in* address)
 {
     return connect(sockfd, (const struct sockaddr *)address, sizeof(*address));
+}
+
+//recv
+tcp_recv_info_t tcp_recv(
+    int sockfd,
+    uint8_t *buffer,
+    size_t capacity
+)
+{
+    tcp_recv_info_t result = {
+        .status = TCP_ERROR,
+        .byte_received = 0
+    };
+
+    if (sockfd == -1 || (buffer == NULL && capacity != 0)) {
+        return result;
+    }
+
+    ssize_t bytes_received;
+
+    do {
+        bytes_received = recv(sockfd, buffer, capacity, 0);
+    } while (bytes_received == -1 && errno == EINTR);
+
+    if (bytes_received <= 0) {
+        return result;
+    }
+
+    result.status = TCP_SUCCESS;    
+    result.byte_received = (size_t)bytes_received;
+    return result;
 }
