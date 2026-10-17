@@ -57,3 +57,8 @@ int tcp_socket_create(void)
 {
     return socket(AF_INET, SOCK_STREAM, 0);
 }
+
+int tcp_connect(int sockfd, const struct sockaddr_in* address)
+{
+    return connect(sockfd, (const struct sockaddr *)address, sizeof(*address));
+}

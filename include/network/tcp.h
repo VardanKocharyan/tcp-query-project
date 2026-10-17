@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <netinet/in.h>
 
 typedef enum {
     TCP_SUCCESS,
@@ -21,5 +22,7 @@ tcp_send_info_t tcp_send_all(
 );
 
 int tcp_socket_create(void);
+
+int tcp_connect(int sockfd, const struct sockaddr_in* address);
 
 #endif

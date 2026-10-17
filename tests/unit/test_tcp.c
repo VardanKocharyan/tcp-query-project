@@ -1,9 +1,10 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <assert.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <stdint.h>
 #include <string.h>
-
 
 #include "network/tcp.h"
 
@@ -88,6 +89,66 @@ static void SocketCreateSuccess(void)
     close(result);
 }
 
+static void TcpConnect(void) 
+{
+    int sockfd = tcp_socket_create();
+
+    assert(sockfd >= 0);
+    if (sockfd < 0) {
+        return;
+    }
+
+    struct sockaddr_in server_address = {0};
+    socklen_t address_len = sizeof(server_address);
+    
+    server_address.sin_family = AF_INET;
+    server_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    server_address.sin_port = 0;
+
+    assert(bind(
+        sockfd, 
+        (const struct sockaddr *)&server_address, 
+        address_len
+    ) == 0);
+
+    assert(listen(sockfd, 5) == 0);
+
+    assert(getsockname(
+        sockfd, 
+        (struct sockaddr *)&server_address, 
+        &address_len
+    ) == 0);
+
+    int cliendfd = tcp_socket_create();
+    assert(cliendfd >= 0);
+
+    int connect_result = tcp_connect(cliendfd, &server_address);
+
+    if(connect_result == -1) {
+        perror("connect");
+        close(sockfd);
+        close(cliendfd);
+        return;
+    }
+
+    assert(connect_result == 0);
+
+    int accepted_fd = accept(sockfd, NULL, NULL);
+ 
+    if (accepted_fd == -1) {
+        perror("accepted");
+        close(sockfd);
+        close(cliendfd);
+        return;
+    }
+
+    assert(accepted_fd >= 0);
+
+    close(sockfd);
+    close(cliendfd);
+    close(accepted_fd);
+}
+
 
 int main(void) {
     ZeroLengthRequest();
@@ -95,7 +156,7 @@ int main(void) {
     SendToClosedPeer();
     SendAllData();
     SocketCreateSuccess();
-
+    TcpConnect();
 
     return 0;
 }   
