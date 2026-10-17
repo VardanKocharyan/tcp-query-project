@@ -20,4 +20,6 @@ tcp_send_info_t tcp_send_all(
     size_t size
 );
 
+int tcp_socket_create(void);
+
 #endif

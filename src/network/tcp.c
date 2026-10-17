@@ -52,3 +52,8 @@ tcp_send_info_t tcp_send_all(
     result.status = TCP_SUCCESS;
     return result;
 }
+
+int tcp_socket_create(void)
+{
+    return socket(AF_INET, SOCK_STREAM, 0);
+}

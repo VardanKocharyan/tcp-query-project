@@ -79,12 +79,23 @@ static void SendAllData(void)
     close(sockets[1]);
 }
 
+static void SocketCreateSuccess(void)
+{
+    int result = tcp_socket_create();
+
+    assert(result >= 0);
+
+    close(result);
+}
+
 
 int main(void) {
     ZeroLengthRequest();
     InvalidSocketDescriptor();
     SendToClosedPeer();
     SendAllData();
-    
+    SocketCreateSuccess();
+
+
     return 0;
 }   
