@@ -18,8 +18,14 @@ enable_testing()
 # Core library
 add_library(tcp_query_core STATIC
     src/core/query_handler.c
+    src/network/tcp.c
     src/protocol/message.c
     src/protocol/codec.c
+    src/protocol/framer.c
+    src/protocol/serializer.c
+    src/protocol/deserializer.c
+    src/protocol/response_serializer.c
+    src/protocol/response_deserializer.c
 )
 
 target_include_directories(tcp_query_core
