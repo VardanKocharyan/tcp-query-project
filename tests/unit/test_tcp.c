@@ -149,14 +149,127 @@ static void TcpConnect(void)
     close(accepted_fd);
 }
 
+static void TcpRecvSuccess(void) {
+    int sockets[2];
+    int socketpair_result = socketpair(AF_UNIX, SOCK_STREAM, 0, sockets);
+
+    assert(socketpair_result == 0);
+
+    uint8_t send_buffer[5] = "hello";
+    tcp_send_info_t send_result = 
+        tcp_send_all(
+            sockets[0], 
+            send_buffer, 
+            5
+        );
+    
+    assert(send_result.status == TCP_SUCCESS);
+    assert(send_result.bytes_sent == 5);
+
+    uint8_t recv_buffer[5];
+    tcp_recv_info_t recv_result = 
+        tcp_recv(
+            sockets[1],
+            recv_buffer,
+            sizeof(recv_buffer)
+        );
+
+    assert(recv_result.status == TCP_SUCCESS);
+    assert(recv_result.byte_received == 5);
+
+    assert(memcmp(send_buffer, recv_buffer, sizeof(send_buffer)) == 0);
+
+    close(sockets[0]);
+    close(sockets[1]);
+}
+
+static void TcpRecvZeroCapacity(void) 
+{
+    int sockets[2];                                                                   
+    int socketpair_result = socketpair(AF_UNIX, SOCK_STREAM, 0, sockets);
+
+    assert(socketpair_result == 0);
+
+    uint8_t send_buffer[5] = "hello";
+    tcp_send_info_t send_result = 
+        tcp_send_all(
+            sockets[0], 
+            send_buffer, 
+            5
+        );
+    
+    assert(send_result.status == TCP_SUCCESS);
+    assert(send_result.bytes_sent == 5);
+
+    tcp_recv_info_t recv_result = 
+        tcp_recv(
+            sockets[1],
+            NULL,
+            0
+        );
+
+    assert(recv_result.status == TCP_SUCCESS);
+    assert(recv_result.byte_received == 0);
+
+    close(sockets[0]);
+    close(sockets[1]);
+}
+
+static void TcpRecvInvalidSocket(void) 
+{
+    uint8_t buffer[5];
+    tcp_recv_info_t result =
+        tcp_recv(
+            -1,
+            buffer,
+            5
+        );
+
+    assert(result.status == TCP_ERROR);
+    assert(result.byte_received == 0);
+}
+
+static void TcpRecvPeerClosed(void)
+{
+    int sockets[2];
+    int socketpair_result = socketpair(
+        AF_UNIX,
+        SOCK_STREAM,
+        0,
+        sockets
+    );
+
+    assert(socketpair_result == 0);
+
+    close(sockets[0]);
+
+    uint8_t buffer[5];
+    tcp_recv_info_t result = tcp_recv(
+        sockets[1],
+        buffer,
+        sizeof(buffer)
+    );
+
+    assert(result.status == TCP_ERROR);
+    assert(result.byte_received == 0);
+
+    close(sockets[1]);
+}
+
+
 
 int main(void) {
+    
     ZeroLengthRequest();
     InvalidSocketDescriptor();
     SendToClosedPeer();
     SendAllData();
     SocketCreateSuccess();
     TcpConnect();
+    TcpRecvSuccess();
+    TcpRecvZeroCapacity();
+    TcpRecvInvalidSocket();
+    TcpRecvPeerClosed();
 
     return 0;
 }   

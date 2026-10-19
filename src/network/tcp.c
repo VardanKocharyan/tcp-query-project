@@ -80,6 +80,11 @@ tcp_recv_info_t tcp_recv(
         return result;
     }
 
+    if (capacity == 0) {
+        result.status = TCP_SUCCESS;
+        return result;
+    }
+
     ssize_t bytes_received;
 
     do {
