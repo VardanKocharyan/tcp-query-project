@@ -3,6 +3,8 @@
 //#include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #include "network/tcp.h"
 
@@ -39,6 +41,8 @@ int main(void)
 
     printf("Server listening on port %d\n", SERVER_PORT);
 
+    uint8_t buffer[256];
+
     for (;;) {
         struct sockaddr_in client_address = {0};
         socklen_t client_address_len = sizeof(client_address);
@@ -54,6 +58,29 @@ int main(void)
         }
 
         printf("Client connected\n");
+
+        while (true) {
+            tcp_recv_info_t recv_result = 
+               tcp_recv(
+                    client_fd, 
+                    buffer,
+                    sizeof(buffer)
+                );
+
+            if (recv_result.status == TCP_ERROR) {
+                break;
+                
+            }
+
+            if (recv_result.byte_received > 0) {
+                for (size_t i = 0; i < recv_result.byte_received; ++i) {
+                    printf("%u ", (unsigned int)buffer[i]);
+                }
+                printf("\n");
+            }
+
+        }
+
         close(client_fd);
     }
 
