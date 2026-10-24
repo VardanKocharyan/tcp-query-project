@@ -7,6 +7,7 @@
 #include <stdbool.h>
 
 #include "network/tcp.h"
+#include "protocol/framer.h"
 
 #define SERVER_PORT 8080
 #define BACKLOG 5
@@ -59,6 +60,9 @@ int main(void)
 
         printf("Client connected\n");
 
+        protocol_framer_t framer;
+        protocol_framer_init(&framer);
+
         while (true) {
             tcp_recv_info_t recv_result = 
                tcp_recv(
@@ -73,14 +77,21 @@ int main(void)
             }
 
             if (recv_result.byte_received > 0) {
-                for (size_t i = 0; i < recv_result.byte_received; ++i) {
-                    printf("%u ", (unsigned int)buffer[i]);
-                }
-                printf("\n");
-            }
+                 protocol_framer_info_t append_result = 
+                    append(
+                        &framer, 
+                        buffer, 
+                        recv_result.byte_received
+                    );
 
+                printf("Append_result.status : %d\n",
+                    (int)append_result.status);
+                printf("append_result.bytes_consumed: %zu\n",
+                    append_result.bytes_consumed);
+            }
         }
 
+        protocol_framer_destroy(&framer); 
         close(client_fd);
     }
 
