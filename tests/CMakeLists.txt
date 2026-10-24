@@ -122,3 +122,15 @@ add_test(
     NAME test_tcp
     COMMAND test_tcp
 )
+
+add_executable(test_tcp_integration
+    integration/test_tcp_integration.c
+)
+
+target_link_libraries(test_tcp_integration PRIVATE tcp_query_core)
+
+add_test(
+    NAME test_tcp_integration
+    COMMAND test_tcp_integration
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)

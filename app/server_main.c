@@ -13,7 +13,7 @@
 #include "protocol/deserializer.h"
 #include "protocol/response_serializer.h"
 
-#define SERVER_PORT 8080
+#define DEFAULT_SERVER_PORT 8080
 #define BACKLOG 5
 
 static int process_frame(int client_fd,
@@ -80,8 +80,25 @@ static int process_frame(int client_fd,
 }
 
 
-int main(void)
+int main(int argc, char* argv[])
 {
+    int port = DEFAULT_SERVER_PORT;
+
+    if (argc > 1) {
+        char *end = NULL;
+        long parsed_port = strtol(argv[1], &end, 10);
+
+        if (end == argv[1] ||
+            *end != '\0' ||
+            parsed_port < 1 ||
+            parsed_port > 65535) {
+            fprintf(stderr, "Invalid port\n");
+            return 1;
+        }
+
+        port = (int)parsed_port;
+    }
+
     int server_fd = tcp_socket_create();
     if (server_fd < 0) {
         perror("tcp_socket_create");
@@ -91,7 +108,7 @@ int main(void)
     struct sockaddr_in server_address = {0};
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = htonl(INADDR_ANY);
-    server_address.sin_port = htons(SERVER_PORT);
+    server_address.sin_port = htons((uint16_t)port);
 
     if (bind(
             server_fd,
@@ -108,7 +125,7 @@ int main(void)
         return 1;
     }
 
-    printf("Server listening on port %d\n", SERVER_PORT);
+    printf("Server listening on port %d\n", (uint16_t)port);
 
     uint8_t buffer[256];
 
