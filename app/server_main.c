@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <errno.h>
+#include <limits.h>
 
 #include "network/tcp.h"
 #include "protocol/framer.h"
@@ -79,6 +81,42 @@ static int process_frame(int client_fd,
     return result;
 }
 
+static int report_port(int fd, int port)
+{
+    char buffer[16];
+
+    int length = snprintf(buffer, sizeof(buffer), "%d\n", port);
+
+    if (length < 0 || (size_t)length >= sizeof(buffer)) {
+        return -1;
+    }
+
+    size_t offset = 0;
+
+    while (offset < (size_t)length) {
+        ssize_t written = write(
+            fd,
+            buffer + offset,
+            (size_t)length - offset
+        );
+
+        if (written < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+
+            return -1;
+        }
+
+        if (written == 0) {
+            return -1;
+        }
+
+        offset += (size_t)written;
+    }
+
+    return 0;
+}
 
 int main(int argc, char* argv[])
 {
@@ -90,13 +128,30 @@ int main(int argc, char* argv[])
 
         if (end == argv[1] ||
             *end != '\0' ||
-            parsed_port < 1 ||
+            parsed_port < 0 ||
             parsed_port > 65535) {
             fprintf(stderr, "Invalid port\n");
             return 1;
         }
 
         port = (int)parsed_port;
+    }
+
+    int report_fd = -1;
+
+    if (argc > 2) {
+        char *end = NULL;
+        long parsed_fd = strtol(argv[2], &end, 10);
+
+        if (end == argv[2] ||
+            *end != '\0' ||
+            parsed_fd < 0 ||
+            parsed_fd > INT_MAX) {
+            fprintf(stderr, "Invalid port reporting descriptor\n");
+            return 1;
+        }
+    
+        report_fd = (int)parsed_fd;
     }
 
     int server_fd = tcp_socket_create();
@@ -119,13 +174,37 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    if (getsockname(
+            server_fd,
+            (struct sockaddr *)&server_address,
+            &(socklen_t){sizeof(server_address)}) < 0) {
+        perror("getsockname");
+        close(server_fd);
+        return 1;
+    }
+
+    port = (int)ntohs(server_address.sin_port);
+
+
     if (listen(server_fd, BACKLOG) < 0) {
         perror("listen");
         close(server_fd);
         return 1;
     }
 
+    if (report_fd >= 0) {
+        if (report_port(report_fd, port) != 0) {
+            perror("report_port");
+            close(report_fd);
+            close(server_fd);
+            return 1;
+        }
+
+        close(report_fd);
+    }
+
     printf("Server listening on port %d\n", (uint16_t)port);
+    fflush(stdout);
 
     uint8_t buffer[256];
 
