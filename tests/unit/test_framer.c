@@ -361,6 +361,64 @@ static void framer_extract_two_frames_test(void)
     protocol_framer_destroy(&framer);
 }
 
+static void framer_extract_fragmented_header_test(void)
+{
+    protocol_framer_t framer;
+    protocol_framer_init(&framer);
+
+    const uint8_t frame[] = {
+        PROTOCOL_MESSAGE_QUERY,
+        0x00, 0x00, 0x00, 0x03,
+        'a', 'b', 'c'
+    };
+
+    /* Fragment 1: first two header bytes. */
+    protocol_framer_info_t append_result =
+        append(&framer, frame, 2);
+
+    assert(append_result.status == PROTOCOL_INCOMPLETE);
+    assert(append_result.bytes_consumed == 2);
+    assert(framer.size == 2);
+
+    protocol_framer_extract_info_t extract_result =
+        protocol_framer_extract(&framer);
+
+    assert(extract_result.status == PROTOCOL_INCOMPLETE);
+    assert(extract_result.frame == NULL);
+    assert(framer.size == 2);
+
+    /* Fragment 2: remaining header bytes and one payload byte. */
+    append_result = append(&framer, frame + 2, 4);
+
+    assert(append_result.status == PROTOCOL_INCOMPLETE);
+    assert(append_result.bytes_consumed == 4);
+    assert(framer.size == 6);
+
+    extract_result = protocol_framer_extract(&framer);
+
+    assert(extract_result.status == PROTOCOL_INCOMPLETE);
+    assert(extract_result.frame == NULL);
+    assert(framer.size == 6);
+
+    /* Fragment 3: remaining two payload bytes. */
+    append_result = append(&framer, frame + 6, sizeof(frame) - 6);
+
+    assert(append_result.status == PROTOCOL_SUCCESS);
+    assert(append_result.bytes_consumed == 2);
+
+    extract_result = protocol_framer_extract(&framer);
+
+    assert(extract_result.status == PROTOCOL_SUCCESS);
+    assert(extract_result.frame != NULL);
+    assert(extract_result.frame_size == sizeof(frame));
+    assert(memcmp(extract_result.frame, frame, sizeof(frame)) == 0);
+    assert(framer.size == 0);
+
+    free(extract_result.frame);
+    protocol_framer_destroy(&framer);
+}
+
+
 static void framer_append_partial_consumption_test(void)
 {
     protocol_framer_t framer;
@@ -374,21 +432,52 @@ static void framer_append_partial_consumption_test(void)
     uint8_t *data = malloc(input_size);
     assert(data != NULL);
 
-    data[0] = PROTOCOL_MESSAGE_QUERY;
-    data[1] = (uint8_t)(((uint32_t)MAX_MESSAGE_SIZE) >> 24);
-    data[2] = (uint8_t)(((uint32_t)MAX_MESSAGE_SIZE) >> 16);
-    data[3] = (uint8_t)(((uint32_t)MAX_MESSAGE_SIZE) >> 8);
-    data[4] = (uint8_t)((uint32_t)MAX_MESSAGE_SIZE);
-    memset(data + PROTOCOL_HEADER_SIZE, 'x', input_size - PROTOCOL_HEADER_SIZE);
+    make_header(
+        data,
+        PROTOCOL_MESSAGE_QUERY,
+        (uint32_t)MAX_MESSAGE_SIZE
+    );
 
-    protocol_framer_info_t result = 
+    memset(
+        data + PROTOCOL_HEADER_SIZE,
+        'x',
+        (size_t)MAX_MESSAGE_SIZE
+    );
+
+    /* The extra byte starts the next frame. */
+    data[max_frame_size] = PROTOCOL_MESSAGE_QUERY;
+
+    /* Append attempts to consume one maximum-size frame plus one byte. */
+    protocol_framer_info_t result =
         append(&framer, data, input_size);
 
     assert(result.status == PROTOCOL_SUCCESS);
     assert(result.bytes_consumed == max_frame_size);
     assert(framer.size == max_frame_size);
 
-    assert(input_size - result.bytes_consumed == 1);
+    /* Extract the complete first frame. */
+    protocol_framer_extract_info_t extracted =
+        protocol_framer_extract(&framer);
+
+    assert(extracted.status == PROTOCOL_SUCCESS);
+    assert(extracted.frame_size == max_frame_size);
+    assert(framer.size == 0);
+
+    free(extracted.frame);
+
+    /* Process the one byte that append did not consume. */
+    size_t remaining_size = input_size - result.bytes_consumed;
+
+    result = append(
+        &framer,
+        data + max_frame_size,
+        remaining_size
+    );
+
+    assert(result.status == PROTOCOL_INCOMPLETE);
+    assert(result.bytes_consumed == 1);
+    assert(framer.size == 1);
+    assert(framer.buffer[0] == PROTOCOL_MESSAGE_QUERY);
 
     free(data);
     protocol_framer_destroy(&framer);
@@ -410,6 +499,7 @@ int main(void)
     framer_extract_zero_payload_test();
     framer_extract_two_frames_test();
     framer_append_partial_consumption_test();    
+    framer_extract_fragmented_header_test();
 
     return 0;
 }
