@@ -81,7 +81,10 @@ int main(void)
     uint8_t recv_buffer[256];
     int exit_status = EXIT_FAILURE;
 
-    while (1) {
+
+    int response_received = 0;
+
+    while (!response_received) {
         tcp_recv_info_t received =
             tcp_recv(sockfd, recv_buffer, sizeof(recv_buffer));
 
@@ -91,52 +94,84 @@ int main(void)
             break;
         }
 
-        protocol_framer_info_t appended =
-            append(&framer, recv_buffer, received.byte_received);
+        size_t offset = 0;
+        int failed = 0;
 
-        if (appended.status != PROTOCOL_SUCCESS &&
-            appended.status != PROTOCOL_INCOMPLETE) {
-            fprintf(stderr, "Failed to frame response\n");
+        while (offset < received.byte_received) {
+            protocol_framer_info_t appended =
+                append(
+                    &framer,
+                    recv_buffer + offset,
+                    received.byte_received - offset
+                );
+
+            if (appended.status != PROTOCOL_SUCCESS &&
+                appended.status != PROTOCOL_INCOMPLETE) {
+                fprintf(stderr, "Failed to frame response\n");
+                failed = 1;
+                break;
+            }
+
+            if (appended.bytes_consumed == 0) {
+                fprintf(stderr, "Framer made no progress\n");
+                failed = 1;
+                break;
+            }
+
+            offset += appended.bytes_consumed;
+
+            while (1) {
+                protocol_framer_extract_info_t extracted =
+                    protocol_framer_extract(&framer);
+
+                if (extracted.status == PROTOCOL_INCOMPLETE) {
+                    break;
+                }
+
+                if (extracted.status != PROTOCOL_SUCCESS) {
+                    fprintf(stderr, "Failed to extract response frame\n");
+                    failed = 1;
+                    break;
+                }
+
+                Response response = {0};
+
+                protocol_parser_info_t parsed =
+                    deserialize_response(
+                        extracted.frame,
+                        extracted.frame_size,
+                        &response
+                    );
+
+                free(extracted.frame);
+
+                if (parsed.status != PROTOCOL_SUCCESS ||
+                    parsed.bytes_consumed != extracted.frame_size) {
+                    fprintf(stderr, "Failed to deserialize response\n");
+                    response_free(&response);
+                    failed = 1;
+                    break;
+                }
+
+                printf("Response status: %s\n",
+                       response.status == SUCCESS ? "SUCCESS" : "FAIL");
+                printf("Response value: %s\n", response.value);
+
+                response_free(&response);
+
+                response_received = 1;
+                exit_status = EXIT_SUCCESS;
+                break;
+            }
+
+            if (failed || response_received) {
+                break;
+            }
+        }
+
+        if (failed) {
             break;
         }
-
-        protocol_framer_extract_info_t extracted =
-            protocol_framer_extract(&framer);
-
-        if (extracted.status == PROTOCOL_INCOMPLETE) {
-            continue;
-        }
-
-        if (extracted.status != PROTOCOL_SUCCESS) {
-            fprintf(stderr, "Failed to extract response frame\n");
-            break;
-        }
-
-        Response response = {0};
-
-        protocol_parser_info_t parsed =
-            deserialize_response(
-                extracted.frame,
-                extracted.frame_size,
-                &response
-            );
-
-        free(extracted.frame);
-
-        if (parsed.status != PROTOCOL_SUCCESS ||
-            parsed.bytes_consumed == 0) {
-            fprintf(stderr, "Failed to deserialize response\n");
-            response_free(&response);
-            break;
-        }
-
-        printf("Response status: %s\n",
-               response.status == SUCCESS ? "SUCCESS" : "FAIL");
-        printf("Response value: %s\n", response.value);
-
-        response_free(&response);
-        exit_status = EXIT_SUCCESS;
-        break;
     }
 
     protocol_framer_destroy(&framer);
