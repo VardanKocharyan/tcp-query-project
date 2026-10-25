@@ -14,6 +14,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <poll.h>
 
 #include "network/tcp.h"
 #include "protocol/framer.h"
@@ -147,7 +148,60 @@ static int read_server_port(int fd)
     char buffer[16];
     size_t offset = 0;
 
+    struct timespec deadline;
+
+    if (clock_gettime(CLOCK_MONOTONIC, &deadline) == -1) {
+        return -1;
+    }
+
+    deadline.tv_sec += 2;
+
     while (offset < sizeof(buffer) - 1) {
+        struct timespec now;
+
+        if (clock_gettime(CLOCK_MONOTONIC, &now) == -1) {
+            return -1;
+        }
+
+        int64_t remaining_ns =
+            (int64_t)(deadline.tv_sec - now.tv_sec) * 1000000000LL +
+            (int64_t)deadline.tv_nsec - now.tv_nsec;
+
+        if (remaining_ns <= 0) {
+            return -1;
+        }
+
+        int timeout_ms = (int)(
+            (remaining_ns + 999999LL) / 1000000LL
+        );
+
+        struct pollfd poll_fd = {
+            .fd = fd,
+            .events = POLLIN
+        };
+
+        int poll_result = poll(&poll_fd, 1, timeout_ms);
+
+        if (poll_result == -1) {
+            if (errno == EINTR) {
+                continue;
+            }
+
+            return -1;
+        }
+
+        if (poll_result == 0) {
+            return -1;
+        }
+
+        if (poll_fd.revents & (POLLERR | POLLNVAL)) {
+            return -1;
+        }
+
+        if (!(poll_fd.revents & (POLLIN | POLLHUP))) {
+            return -1;
+        }
+
         char ch;
         ssize_t received = read(fd, &ch, 1);
 
