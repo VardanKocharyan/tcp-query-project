@@ -418,8 +418,178 @@ cleanup:
     return test_result;
 }
 
+
+static int multiple_requests_same_connection_test(void)
+{
+    int port_read_fd = -1;
+    int port_write_fd = -1;
+    int server_port = -1;
+
+    pid_t server_pid = -1;
+    int client_fd = -1;
+    int framer_initialized = 0;
+    int test_result = EXIT_FAILURE;
+
+    protocol_framer_t framer = {0};
+    protocol_framer_extract_info_t extracted = {0};
+    Response response = {0};
+
+    server_pid = start_server(&port_read_fd, &port_write_fd);
+    CHECK(server_pid > 0);
+
+    server_port = read_server_port(port_read_fd);
+    CHECK(server_port > 0);
+
+    close(port_read_fd);
+    port_read_fd = -1;
+
+    client_fd = connect_to_server(server_port);
+    CHECK(client_fd >= 0);
+    CHECK(set_receive_timeout(client_fd) == 0);
+
+    Query query = {0};
+    query_init(&query, PING, "", "");
+
+    uint8_t request[PROTOCOL_HEADER_SIZE + MAX_MESSAGE_SIZE];
+
+    protocol_result_info_t serialized =
+        serialize_query(&query, request, sizeof(request));
+
+    CHECK(serialized.status == PROTOCOL_SUCCESS);
+    CHECK(serialized.bytes_written > 0);
+
+    /*
+     * Send two complete requests over the same TCP connection.
+     */
+    CHECK(send_fragment(
+        client_fd,
+        request,
+        serialized.bytes_written
+    ));
+
+    CHECK(send_fragment(
+        client_fd,
+        request,
+        serialized.bytes_written
+    ));
+
+    protocol_framer_init(&framer);
+    framer_initialized = 1;
+
+    uint8_t recv_buffer[256];
+    int responses_received = 0;
+
+    while (responses_received < 2) {
+        tcp_recv_info_t received =
+            tcp_recv(client_fd, recv_buffer, sizeof(recv_buffer));
+
+        CHECK(received.status == TCP_SUCCESS);
+        CHECK(received.byte_received > 0);
+
+        size_t offset = 0;
+
+        while (offset < received.byte_received) {
+            protocol_framer_info_t appended = append(
+                &framer,
+                recv_buffer + offset,
+                received.byte_received - offset
+            );
+
+            CHECK(
+                appended.status == PROTOCOL_SUCCESS ||
+                appended.status == PROTOCOL_INCOMPLETE
+            );
+
+            CHECK(appended.bytes_consumed > 0);
+            offset += appended.bytes_consumed;
+
+            while (1) {
+                extracted = protocol_framer_extract(&framer);
+
+                if (extracted.status == PROTOCOL_INCOMPLETE) {
+                    break;
+                }
+
+                CHECK(extracted.status == PROTOCOL_SUCCESS);
+
+                protocol_parser_info_t parsed =
+                    deserialize_response(
+                        extracted.frame,
+                        extracted.frame_size,
+                        &response
+                    );
+
+                CHECK(parsed.status == PROTOCOL_SUCCESS);
+                CHECK(parsed.bytes_consumed == extracted.frame_size);
+                CHECK(response.status == SUCCESS);
+                CHECK(response.value != NULL);
+                CHECK(strcmp(response.value, "PONG") == 0);
+
+                response_free(&response);
+                response = (Response){0};
+
+                free(extracted.frame);
+                extracted = (protocol_framer_extract_info_t){0};
+
+                ++responses_received;
+
+                if (responses_received == 2) {
+                    break;
+                }
+            }
+
+            if (responses_received == 2) {
+                break;
+            }
+        }
+    }
+
+    printf(
+        "Integration test passed: received %d PONG responses "
+        "on one connection\n",
+        responses_received
+    );
+
+    test_result = EXIT_SUCCESS;
+
+cleanup:
+    response_free(&response);
+    free(extracted.frame);
+
+    if (framer_initialized) {
+        protocol_framer_destroy(&framer);
+    }
+
+    if (client_fd >= 0) {
+        close(client_fd);
+    }
+
+    if (!stop_server(server_pid)) {
+        test_result = EXIT_FAILURE;
+    }
+
+    if (port_read_fd >= 0) {
+        close(port_read_fd);
+    }
+
+    if (port_write_fd >= 0) {
+        close(port_write_fd);
+    }
+
+    return test_result;
+}
+
+
 int main(void)
 {
-    return fragmented_ping_request_test();
+    if (fragmented_ping_request_test() != EXIT_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+
+    if (multiple_requests_same_connection_test() != EXIT_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
 }
 
