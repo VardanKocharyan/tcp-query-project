@@ -214,6 +214,34 @@ void test_deserializer_trailing_payload_bytes(void)
     assert(result.bytes_consumed == 0);
 }
 
+void test_deserializer_invalid_key_length(void)
+{
+    Query original;
+    query_init(&original, PING, "name", "Vardan");
+
+    uint8_t buffer[64];
+
+    protocol_result_info_t serialized =
+        serialize_query(&original, buffer, sizeof(buffer));
+
+    assert(serialized.status == PROTOCOL_SUCCESS);
+
+    // The key length is stored in bytes 6 and 7.
+    // Claim a key length of 65535 bytes.
+    buffer[6] = 0xFF;
+    buffer[7] = 0xFF;
+
+    Query parsed = {0};
+
+    protocol_parser_info_t result = deserialize_query(
+        buffer,
+        serialized.bytes_written,
+        &parsed
+    );
+
+    assert(result.status == PROTOCOL_INVALID);
+    assert(result.bytes_consumed == 0);
+}
 
 int main(void)
 {
@@ -226,6 +254,7 @@ int main(void)
     test_deserializer_too_small_payload();
     test_deserializer_null_arguments();
     test_deserializer_trailing_payload_bytes();
+    test_deserializer_invalid_key_length();
 
     return 0;
 }
