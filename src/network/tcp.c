@@ -91,7 +91,12 @@ tcp_recv_info_t tcp_recv(
         bytes_received = recv(sockfd, buffer, capacity, 0);
     } while (bytes_received == -1 && errno == EINTR);
 
-    if (bytes_received <= 0) {
+    if (bytes_received == 0) {
+        result.status = TCP_DISCONNECTED;
+        return result;
+    }
+
+    if (bytes_received < 0) {
         return result;
     }
 

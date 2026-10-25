@@ -88,9 +88,18 @@ int main(void)
         tcp_recv_info_t received =
             tcp_recv(sockfd, recv_buffer, sizeof(recv_buffer));
 
-        if (received.status != TCP_SUCCESS ||
-            received.byte_received == 0) {
+        if (received.status == TCP_DISCONNECTED) {
+            fprintf(stderr, "Server disconnected before sending a response\n");
+            break;
+        }
+
+        if (received.status == TCP_ERROR) {
             fprintf(stderr, "Failed to receive response\n");
+            break;
+        }
+
+        if (received.byte_received == 0) {
+            fprintf(stderr, "No response data received\n");
             break;
         }
 

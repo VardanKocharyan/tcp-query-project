@@ -7,6 +7,7 @@
 
 typedef enum {
     TCP_SUCCESS,
+    TCP_DISCONNECTED,
     TCP_ERROR
 } tcp_result_t; 
 

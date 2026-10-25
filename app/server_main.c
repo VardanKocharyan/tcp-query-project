@@ -231,7 +231,12 @@ int main(int argc, char* argv[])
             tcp_recv_info_t recv_result =
                 tcp_recv(client_fd, buffer, sizeof(buffer));
 
+            if (recv_result.status == TCP_DISCONNECTED) {
+                break;
+            }
+
             if (recv_result.status == TCP_ERROR) {
+                perror("recv");
                 break;
             }
 

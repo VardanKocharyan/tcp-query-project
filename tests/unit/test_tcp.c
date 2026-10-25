@@ -250,7 +250,7 @@ static void TcpRecvPeerClosed(void)
         sizeof(buffer)
     );
 
-    assert(result.status == TCP_ERROR);
+    assert(result.status == TCP_DISCONNECTED);
     assert(result.byte_received == 0);
 
     close(sockets[1]);
