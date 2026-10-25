@@ -75,7 +75,7 @@ protocol_parser_info_t deserialize_query(
     
     size_t value_start = value_length_offset + sizeof(uint16_t);
 
-    if (value_start + value_length > frame_size) {
+    if (value_start + value_length != frame_size) {
         return parse;
     }
 

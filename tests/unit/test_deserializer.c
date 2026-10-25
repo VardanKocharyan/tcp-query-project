@@ -181,6 +181,40 @@ void test_deserializer_null_arguments(void)
     assert(result.bytes_consumed == 0);
 }
 
+
+void test_deserializer_trailing_payload_bytes(void)
+{
+    Query original;
+    query_init(&original, PING, "name", "Vardan");
+
+    uint8_t buffer[64];
+
+    protocol_result_info_t serialized =
+        serialize_query(&original, buffer, sizeof(buffer));
+
+    assert(serialized.status == PROTOCOL_SUCCESS);
+
+    /*
+     * Increase the declared payload length by one byte.
+     * The protocol header stores this length in big-endian order.
+     */
+    buffer[4] += 1;
+    buffer[serialized.bytes_written] = 0xAA;
+
+    Query parsed = {0};
+
+    protocol_parser_info_t result =
+        deserialize_query(
+            buffer,
+            serialized.bytes_written + 1,
+            &parsed
+        );
+
+    assert(result.status == PROTOCOL_INVALID);
+    assert(result.bytes_consumed == 0);
+}
+
+
 int main(void)
 {
     test_deserializer_ping();
@@ -191,6 +225,7 @@ int main(void)
     test_deserializer_invalid_operation();
     test_deserializer_too_small_payload();
     test_deserializer_null_arguments();
+    test_deserializer_trailing_payload_bytes();
 
     return 0;
 }
