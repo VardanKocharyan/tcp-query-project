@@ -243,6 +243,37 @@ void test_deserializer_invalid_key_length(void)
     assert(result.bytes_consumed == 0);
 }
 
+
+void test_deserializer_invalid_value_length(void)
+{
+    Query original;
+    query_init(&original, SET, "name", "Vardan");
+
+    uint8_t buffer[64];
+
+    protocol_result_info_t serialized =
+        serialize_query(&original, buffer, sizeof(buffer));
+
+    assert(serialized.status == PROTOCOL_SUCCESS);
+
+    size_t value_length_offset = 8 + strlen("name");
+
+    // Claim a value length of 65535 bytes.
+    buffer[value_length_offset] = 0xFF;
+    buffer[value_length_offset + 1] = 0xFF;
+
+    Query parsed = {0};
+
+    protocol_parser_info_t result = deserialize_query(
+        buffer,
+        serialized.bytes_written,
+        &parsed
+    );
+
+    assert(result.status == PROTOCOL_INVALID);
+    assert(result.bytes_consumed == 0);
+}
+
 int main(void)
 {
     test_deserializer_ping();
@@ -255,6 +286,7 @@ int main(void)
     test_deserializer_null_arguments();
     test_deserializer_trailing_payload_bytes();
     test_deserializer_invalid_key_length();
+    test_deserializer_invalid_value_length();
 
     return 0;
 }
