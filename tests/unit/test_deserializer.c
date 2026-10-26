@@ -5,6 +5,7 @@
 #include "protocol/protocol.h"
 #include "protocol/deserializer.h"
 #include "protocol/serializer.h"
+#include "protocol/codec.h"
 
 void test_deserializer_ping(void)
 {
@@ -304,6 +305,48 @@ void test_deserializer_declared_payload_larger_than_input(void)
 }
 
 
+void test_deserializer_failure_leaves_query_unchanged(void)
+{
+    uint8_t buffer[128] = {0};
+
+    Query original = {
+        .operation = SET,
+        .key = "key",
+        .value = "value"
+    };
+
+    protocol_result_info_t serialized =
+        serialize_query(&original, buffer, sizeof(buffer));
+
+    assert(serialized.status == PROTOCOL_SUCCESS);
+
+    /*
+     * The value-length field follows:
+     * header + operation + key-length + key.
+     */
+    size_t value_length_offset =
+        PROTOCOL_HEADER_SIZE + 1 + sizeof(uint16_t) +
+        strlen(original.key);
+
+    write_u16(buffer + value_length_offset, UINT16_MAX);
+
+    Query output = {
+        .operation = GET,
+        .key = NULL,
+        .value = NULL
+    };
+
+    protocol_parser_info_t result =
+        deserialize_query(buffer, serialized.bytes_written, &output);
+
+    assert(result.status == PROTOCOL_INVALID);
+    assert(output.operation == GET);
+    assert(output.key == NULL);
+    assert(output.value == NULL);
+}
+
+
+
 int main(void)
 {
     test_deserializer_ping();
@@ -318,6 +361,7 @@ int main(void)
     test_deserializer_invalid_key_length();
     test_deserializer_invalid_value_length();
     test_deserializer_declared_payload_larger_than_input();
+    test_deserializer_failure_leaves_query_unchanged();
 
     return 0;
 }

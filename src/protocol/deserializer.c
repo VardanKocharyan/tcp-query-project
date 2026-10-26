@@ -45,17 +45,18 @@ protocol_parser_info_t deserialize_query(
         return parse;
     }
 
+    query_operation_t operation;
     switch (buffer[5]) {
         case PING:
-            query->operation = PING;
+            operation = PING;
             break;
 
         case GET:
-            query->operation = GET;
+            operation = GET;
             break;
 
         case SET:
-            query->operation = SET;
+            operation = SET;
             break;
 
         default:
@@ -96,6 +97,7 @@ protocol_parser_info_t deserialize_query(
     memcpy(value, buffer + value_start, value_length);
     value[value_length] = '\0';
 
+    query->operation = operation;
     query->key = key;
     query->value = value;
 
