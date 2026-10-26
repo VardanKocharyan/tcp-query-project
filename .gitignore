@@ -58,8 +58,8 @@ tsan/
 msan/
 
 # Core dumps
-core
-core.*
+/core
+/core.*
 *.core
 
 # Valgrind
