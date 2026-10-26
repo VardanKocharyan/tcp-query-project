@@ -49,6 +49,23 @@ static void test_null_response(void) {
     assert(result == -1);
 }
 
+static void test_get_with_empty_key(void)
+{
+    Query query = {
+        .operation = GET,
+        .key = "",
+        .value = ""
+    };
+
+    Response response = {0};
+
+    int result = query_handler_process(&query, &response);
+
+    assert(result == 0);
+    assert(response.status == FAIL);
+    assert(strcmp(response.value, "empty key") == 0);
+}
+
 int main(void)
 {
     test_ping();
@@ -56,6 +73,7 @@ int main(void)
     test_null_query();
     test_null_query();
     test_null_response();
+    test_get_with_empty_key();
 
     return 0;
 }
