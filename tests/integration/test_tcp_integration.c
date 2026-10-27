@@ -23,8 +23,6 @@
 #include "protocol/serializer.h"
 #include "protocol/response_deserializer.h"
 
-#define SERVER_PATH "./build/tcp-query-server"
-
 #define CHECK(condition)                                      \
     do {                                                      \
         if (!(condition)) {                                   \

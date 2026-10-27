@@ -127,6 +127,13 @@ add_executable(test_tcp_integration
     integration/test_tcp_integration.c
 )
 
+add_dependencies(test_tcp_integration tcp-query-server)
+
+target_compile_definitions(test_tcp_integration
+    PRIVATE
+        SERVER_PATH=\"$<TARGET_FILE:tcp-query-server>\"
+)
+
 target_link_libraries(test_tcp_integration PRIVATE tcp_query_core)
 
 add_test(
