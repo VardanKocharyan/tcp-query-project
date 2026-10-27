@@ -101,6 +101,9 @@ protocol_parser_info_t deserialize_query(
     query->key = key;
     query->value = value;
 
+    query->owns_key = true;
+    query->owns_value = true;
+
     parse.status = PROTOCOL_SUCCESS;
     parse.bytes_consumed = frame_size;
 

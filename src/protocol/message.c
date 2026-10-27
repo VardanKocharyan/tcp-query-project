@@ -10,6 +10,9 @@ void query_init(Query* query,
     query->operation    = op;
     query->key          = k;
     query->value        = val;
+
+    query->owns_key = false;
+    query->owns_value = false;
 }
 
 void response_init(Response *response,
@@ -18,6 +21,8 @@ void response_init(Response *response,
 {
     response->status = status;
     response->value = value;
+
+    response->owns_value = false;
 }
 
 void query_free(Query* query)
@@ -26,11 +31,18 @@ void query_free(Query* query)
         return;
     }
 
-    free((void*)query->key);
-    free((void*)query->value);
+    if (query->owns_key) {
+        free((void*)query->key);
+    }
+
+    if (query->owns_value) {
+        free((void*)query->value);
+    }
 
     query->key = NULL;
     query->value = NULL;
+    query->owns_key = false;
+    query->owns_value = false;
 }
 
 void response_free(Response* response)
@@ -39,6 +51,10 @@ void response_free(Response* response)
         return;
     }
 
-    free((void*)response->value);
+    if (response->owns_value) {
+        free((void*)response->value);
+    }
+
     response->value = NULL;
+    response->owns_value = false;
 }

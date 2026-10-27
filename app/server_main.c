@@ -218,8 +218,13 @@ int main(int argc, char* argv[])
             &client_address_len);
 
         if (client_fd < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+
             perror("accept");
-            continue;
+            close(server_fd);
+            return EXIT_FAILURE;
         }
 
         printf("Client connected\n");

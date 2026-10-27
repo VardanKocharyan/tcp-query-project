@@ -742,6 +742,179 @@ cleanup:
     return test_result;
 }
 
+
+static int malformed_request_disconnect_test(void)
+{
+    int port_read_fd = -1;
+    int port_write_fd = -1;
+    int server_port = -1;
+
+    pid_t server_pid = -1;
+    int malformed_client_fd = -1;
+    int valid_client_fd = -1;
+    int framer_initialized = 0;
+    int test_result = EXIT_FAILURE;
+
+    protocol_framer_t framer = {0};
+    protocol_framer_extract_info_t extracted = {0};
+    Response response = {0};
+    Query query = {0};
+
+    server_pid = start_server(&port_read_fd, &port_write_fd);
+    CHECK(server_pid > 0);
+
+    server_port = read_server_port(port_read_fd);
+    CHECK(server_port > 0);
+
+    close(port_read_fd);
+    port_read_fd = -1;
+
+    /*
+     * First client sends a complete frame with an invalid message type.
+     */
+    malformed_client_fd = connect_to_server(server_port);
+    CHECK(malformed_client_fd >= 0);
+    CHECK(set_receive_timeout(malformed_client_fd) == 0);
+
+    const uint8_t malformed_frame[PROTOCOL_HEADER_SIZE] = {
+        0xFF,
+        0x00, 0x00, 0x00, 0x00
+    };
+
+    CHECK(send_fragment(
+        malformed_client_fd,
+        malformed_frame,
+        sizeof(malformed_frame)
+    ));
+
+    /*
+     * The server should reject the request and close this connection.
+     * A timeout or another receive error is not considered success.
+     */
+    tcp_recv_info_t disconnected =
+        tcp_recv(malformed_client_fd, (uint8_t[1]){0}, 1);
+
+    CHECK(disconnected.status == TCP_DISCONNECTED);
+
+    close(malformed_client_fd);
+    malformed_client_fd = -1;
+
+    /*
+     * A second client must still be able to use the server.
+     */
+    valid_client_fd = connect_to_server(server_port);
+    CHECK(valid_client_fd >= 0);
+    CHECK(set_receive_timeout(valid_client_fd) == 0);
+
+    query_init(&query, PING, "", "");
+
+    uint8_t request[PROTOCOL_HEADER_SIZE + MAX_MESSAGE_SIZE];
+
+    protocol_result_info_t serialized =
+        serialize_query(&query, request, sizeof(request));
+
+    CHECK(serialized.status == PROTOCOL_SUCCESS);
+
+    CHECK(send_fragment(
+        valid_client_fd,
+        request,
+        serialized.bytes_written
+    ));
+
+    protocol_framer_init(&framer);
+    framer_initialized = 1;
+
+    uint8_t recv_buffer[256];
+    int frame_received = 0;
+
+    while (!frame_received) {
+        tcp_recv_info_t received =
+            tcp_recv(valid_client_fd, recv_buffer, sizeof(recv_buffer));
+
+        CHECK(received.status == TCP_SUCCESS);
+        CHECK(received.byte_received > 0);
+
+        size_t offset = 0;
+
+        while (offset < received.byte_received) {
+            protocol_framer_info_t appended = append(
+                &framer,
+                recv_buffer + offset,
+                received.byte_received - offset
+            );
+
+            CHECK(
+                appended.status == PROTOCOL_SUCCESS ||
+                appended.status == PROTOCOL_INCOMPLETE
+            );
+
+            CHECK(appended.bytes_consumed > 0);
+            offset += appended.bytes_consumed;
+
+            extracted = protocol_framer_extract(&framer);
+
+            if (extracted.status == PROTOCOL_INCOMPLETE) {
+                continue;
+            }
+
+            CHECK(extracted.status == PROTOCOL_SUCCESS);
+            frame_received = 1;
+            break;
+        }
+    }
+
+    protocol_parser_info_t parsed = deserialize_response(
+        extracted.frame,
+        extracted.frame_size,
+        &response
+    );
+
+    CHECK(parsed.status == PROTOCOL_SUCCESS);
+    CHECK(parsed.bytes_consumed == extracted.frame_size);
+    CHECK(response.status == SUCCESS);
+    CHECK(response.value != NULL);
+    CHECK(strcmp(response.value, "PONG") == 0);
+
+    printf(
+        "Integration test passed: malformed request rejected "
+        "and server remained available\n"
+    );
+
+    test_result = EXIT_SUCCESS;
+
+cleanup:
+    query_free(&query);
+    response_free(&response);
+    free(extracted.frame);
+
+    if (framer_initialized) {
+        protocol_framer_destroy(&framer);
+    }
+
+    if (malformed_client_fd >= 0) {
+        close(malformed_client_fd);
+    }
+
+    if (valid_client_fd >= 0) {
+        close(valid_client_fd);
+    }
+
+    if (!stop_server(server_pid)) {
+        test_result = EXIT_FAILURE;
+    }
+
+    if (port_read_fd >= 0) {
+        close(port_read_fd);
+    }
+
+    if (port_write_fd >= 0) {
+        close(port_write_fd);
+    }
+
+    return test_result;
+}
+
+
 int main(void)
 {
     if (fragmented_ping_request_test() != EXIT_SUCCESS) {
@@ -753,6 +926,10 @@ int main(void)
     }
 
     if (incomplete_frame_disconnect_test() != EXIT_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+
+    if (malformed_request_disconnect_test() != EXIT_SUCCESS) {
         return EXIT_FAILURE;
     }
 

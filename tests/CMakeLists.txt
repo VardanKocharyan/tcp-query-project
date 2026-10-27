@@ -134,3 +134,9 @@ add_test(
     COMMAND test_tcp_integration
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
+
+set_tests_properties(
+    test_tcp_integration
+    PROPERTIES
+        TIMEOUT 10
+)

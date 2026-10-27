@@ -95,6 +95,7 @@ protocol_parser_info_t deserialize_response(
      */
     response->status = status;
     response->value = value;
+    response->owns_value = true;
 
     parse.status = PROTOCOL_SUCCESS;
     parse.bytes_consumed = frame_size;
