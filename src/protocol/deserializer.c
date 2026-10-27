@@ -18,6 +18,12 @@ protocol_parser_info_t deserialize_query(
         return parse;
     }
 
+    /* Never overwrite an existing object and leak its owned strings. */
+    if (query->key != NULL || query->value != NULL ||
+        query->owns_key || query->owns_value) {
+        return parse;
+    }
+
     if (length < PROTOCOL_HEADER_SIZE) {
         parse.status = PROTOCOL_INCOMPLETE;
         return parse;
@@ -73,10 +79,16 @@ protocol_parser_info_t deserialize_query(
     }
 
     uint16_t value_length = read_u16(buffer + value_length_offset);
-    
+
     size_t value_start = value_length_offset + sizeof(uint16_t);
 
     if (value_start + value_length != frame_size) {
+        return parse;
+    }
+
+    /* The public API exposes these fields as C strings. */
+    if (memchr(buffer + key_start, '\0', key_length) != NULL ||
+        memchr(buffer + value_start, '\0', value_length) != NULL) {
         return parse;
     }
 

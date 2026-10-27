@@ -3,7 +3,8 @@
 
 #include <stdbool.h>
 
-// Query
+// Query: query_init stores borrowed strings; query_free only frees fields
+// marked as owned. Do not reinitialize an object while it owns allocations.
 typedef enum {
     PING,
     GET,
@@ -25,7 +26,8 @@ void query_init(Query* query, query_operation_t op,
 void query_free(Query* query);
 
 
-// Response
+// Response: response_init stores a borrowed value; response_free only frees
+// the value when owns_value is true. Do not reinitialize an owning object.
 typedef enum {
     SUCCESS,
     FAIL

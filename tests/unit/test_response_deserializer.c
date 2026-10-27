@@ -277,6 +277,71 @@ static void test_maximum_value(void)
 }
 
 
+
+static void test_trailing_payload_bytes_rejected(void)
+{
+    /* The declared payload includes one byte beyond the empty value. */
+    uint8_t buffer[9] = {
+        PROTOCOL_MESSAGE_RESPONSE,
+        0x00, 0x00, 0x00, 0x04,
+        SUCCESS,
+        0x00, 0x00,
+        'x'
+    };
+
+    Response response = {0};
+    protocol_parser_info_t result =
+        deserialize_response(buffer, sizeof(buffer), &response);
+
+    assert(result.status == PROTOCOL_INVALID);
+    assert(result.bytes_consumed == 0);
+    assert(response.value == NULL);
+}
+
+static void test_embedded_nul_value_rejected(void)
+{
+    uint8_t buffer[10] = {
+        PROTOCOL_MESSAGE_RESPONSE,
+        0x00, 0x00, 0x00, 0x05,
+        SUCCESS,
+        0x00, 0x02,
+        'a', '\0'
+    };
+
+    Response response = {0};
+    protocol_parser_info_t result =
+        deserialize_response(buffer, sizeof(buffer), &response);
+
+    assert(result.status == PROTOCOL_INVALID);
+    assert(result.bytes_consumed == 0);
+    assert(response.value == NULL);
+}
+
+
+static void test_response_deserializer_rejects_nonempty_output(void)
+{
+    uint8_t buffer[8] = {
+        PROTOCOL_MESSAGE_RESPONSE,
+        0x00, 0x00, 0x00, 0x03,
+        SUCCESS,
+        0x00, 0x00
+    };
+
+    Response response = {0};
+    protocol_parser_info_t first =
+        deserialize_response(buffer, sizeof(buffer), &response);
+    assert(first.status == PROTOCOL_SUCCESS);
+
+    const char *owned_value = response.value;
+    protocol_parser_info_t second =
+        deserialize_response(buffer, sizeof(buffer), &response);
+
+    assert(second.status == PROTOCOL_INVALID);
+    assert(second.bytes_consumed == 0);
+    assert(response.value == owned_value);
+    response_free(&response);
+}
+
 int main(void)
 {
     test_serialize_deserialize_success();
@@ -291,6 +356,9 @@ int main(void)
     test_invalid_status();
     test_invalid_value_length();
     test_maximum_value();
+    test_trailing_payload_bytes_rejected();
+    test_embedded_nul_value_rejected();
+    test_response_deserializer_rejects_nonempty_output();
 
     return 0;
 }

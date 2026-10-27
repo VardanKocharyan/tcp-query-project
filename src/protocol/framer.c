@@ -9,6 +9,10 @@
 
 void protocol_framer_init(protocol_framer_t* framer)
 {
+    if (framer == NULL) {
+        return;
+    }
+
     framer->buffer = NULL;
     framer->size = 0;
     framer->capacity = 0;
@@ -16,6 +20,10 @@ void protocol_framer_init(protocol_framer_t* framer)
 
 void protocol_framer_destroy(protocol_framer_t* framer)
 {
+    if (framer == NULL) {
+        return;
+    }
+
     free(framer->buffer);
 
     framer->buffer = NULL;
@@ -81,6 +89,12 @@ protocol_framer_info_t append(
     result.bytes_consumed = bytes_to_copy;
 
     if (framer->size >= PROTOCOL_HEADER_SIZE) {
+        if (framer->buffer[0] != PROTOCOL_MESSAGE_QUERY &&
+            framer->buffer[0] != PROTOCOL_MESSAGE_RESPONSE) {
+            result.status = PROTOCOL_INVALID;
+            return result;
+        }
+
         uint32_t payload_length = read_u32(framer->buffer + 1);
 
         if (payload_length > MAX_MESSAGE_SIZE) {
@@ -120,6 +134,12 @@ protocol_framer_extract_info_t protocol_framer_extract(
 
     if (framer->size < PROTOCOL_HEADER_SIZE) {
         result.status = PROTOCOL_INCOMPLETE;
+        return result;
+    }
+
+    if (framer->buffer[0] != PROTOCOL_MESSAGE_QUERY &&
+        framer->buffer[0] != PROTOCOL_MESSAGE_RESPONSE) {
+        result.status = PROTOCOL_INVALID;
         return result;
     }
 

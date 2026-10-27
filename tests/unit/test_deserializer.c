@@ -347,6 +347,58 @@ void test_deserializer_failure_leaves_query_unchanged(void)
 
 
 
+
+static void test_embedded_nul_string_bytes_rejected(void)
+{
+    Query original;
+    query_init(&original, SET, "key", "value");
+
+    uint8_t buffer[64] = {0};
+    protocol_result_info_t serialized =
+        serialize_query(&original, buffer, sizeof(buffer));
+    assert(serialized.status == PROTOCOL_SUCCESS);
+
+    /* The key begins at byte 8; replace its second byte with NUL. */
+    buffer[9] = '\0';
+
+    Query parsed = {0};
+    protocol_parser_info_t result =
+        deserialize_query(buffer, serialized.bytes_written, &parsed);
+
+    assert(result.status == PROTOCOL_INVALID);
+    assert(result.bytes_consumed == 0);
+    assert(parsed.key == NULL);
+    assert(parsed.value == NULL);
+}
+
+
+static void test_deserializer_rejects_nonempty_output(void)
+{
+    Query original;
+    query_init(&original, GET, "key", "value");
+
+    uint8_t buffer[64] = {0};
+    protocol_result_info_t serialized =
+        serialize_query(&original, buffer, sizeof(buffer));
+    assert(serialized.status == PROTOCOL_SUCCESS);
+
+    Query parsed = {0};
+    protocol_parser_info_t first =
+        deserialize_query(buffer, serialized.bytes_written, &parsed);
+    assert(first.status == PROTOCOL_SUCCESS);
+
+    const char *owned_key = parsed.key;
+    const char *owned_value = parsed.value;
+    protocol_parser_info_t second =
+        deserialize_query(buffer, serialized.bytes_written, &parsed);
+
+    assert(second.status == PROTOCOL_INVALID);
+    assert(second.bytes_consumed == 0);
+    assert(parsed.key == owned_key);
+    assert(parsed.value == owned_value);
+    query_free(&parsed);
+}
+
 int main(void)
 {
     test_deserializer_ping();
@@ -362,6 +414,8 @@ int main(void)
     test_deserializer_invalid_value_length();
     test_deserializer_declared_payload_larger_than_input();
     test_deserializer_failure_leaves_query_unchanged();
+    test_embedded_nul_string_bytes_rejected();
+    test_deserializer_rejects_nonempty_output();
 
     return 0;
 }

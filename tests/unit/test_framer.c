@@ -484,6 +484,28 @@ static void framer_append_partial_consumption_test(void)
 }
 
 
+
+static void framer_rejects_invalid_message_type_test(void)
+{
+    protocol_framer_t framer;
+    protocol_framer_init(&framer);
+
+    const uint8_t header[PROTOCOL_HEADER_SIZE] = {
+        0xFF, 0x00, 0x00, 0x00, 0x00
+    };
+
+    protocol_framer_info_t result = append(&framer, header, sizeof(header));
+    assert(result.status == PROTOCOL_INVALID);
+
+    protocol_framer_destroy(&framer);
+}
+
+static void framer_init_destroy_null_are_safe_test(void)
+{
+    protocol_framer_init(NULL);
+    protocol_framer_destroy(NULL);
+}
+
 int main(void)
 {
     framer_init_test();
@@ -498,7 +520,9 @@ int main(void)
     framer_extract_oversized_payload_test();
     framer_extract_zero_payload_test();
     framer_extract_two_frames_test();
-    framer_append_partial_consumption_test();    
+    framer_append_partial_consumption_test();
+    framer_rejects_invalid_message_type_test();
+    framer_init_destroy_null_are_safe_test();
     framer_extract_fragmented_header_test();
 
     return 0;

@@ -18,6 +18,11 @@ protocol_parser_info_t deserialize_response(
         return parse;
     }
 
+    /* Never overwrite an existing value and leak its owned allocation. */
+    if (response->value != NULL || response->owns_value) {
+        return parse;
+    }
+
     if (capacity < PROTOCOL_HEADER_SIZE) {
         parse.status = PROTOCOL_INCOMPLETE;
         return parse;
@@ -76,7 +81,12 @@ protocol_parser_info_t deserialize_response(
      */
     size_t value_end = 8 + (size_t)value_length;
 
-    if (value_end > frame_size) {
+    if (value_end != frame_size) {
+        return parse;
+    }
+
+    /* Response values are represented as NUL-terminated C strings. */
+    if (memchr(buffer + 8, '\0', value_length) != NULL) {
         return parse;
     }
 
